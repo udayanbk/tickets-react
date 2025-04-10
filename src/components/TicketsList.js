@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Table,
   TableBody,
@@ -10,107 +10,495 @@ import {
   Paper,
   Typography,
   Button,
-  Stack
-} from '@mui/material';
+  Stack,
+  DialogActions,
+  TextField,
+  DialogContent,
+  DialogTitle,
+  Dialog,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Select,
+  FormHelperText,
+  Box,
+  Tabs,
+  Tab,
+} from "@mui/material";
+import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
+import { actionTicket, bucketTickets, createTicket, ticketHistory } from "../api/ticket_api";
 
 const TicketsList = ({ empId }) => {
   const [tickets, setTickets] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [actionType, setActionType] = useState("");
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [comment, setComment] = useState("");
+  const [activeTab, setActiveTab] = useState(0);
+  const [historyTickets, setHistoryTickets] = useState([]);
 
   useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const res = await axios.get(`http://localhost:5000/api/tickets/${empId}`);
-        setTickets(res.data.data);
-      } catch (error) {
-        console.error('Error fetching tickets', error);
-      }
-    };
-
     fetchTickets();
   }, [empId]);
 
   const fetchTickets = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/tickets/${empId}`);
+      // const res = await axios.get(`http://localhost:5000/api/tickets/${empId}`);
+      const res = await bucketTickets({empId})
       setTickets(res.data.data);
     } catch (error) {
-      console.error('Error fetching tickets', error);
+      console.error("Error fetching tickets", error);
     }
   };
-  
 
-  const handleApprove = async (ticketId) => {
-    console.log(`Approve ticket ID: ${ticketId}`);
-    try{
-      const response = await axios.post(`http://localhost:5000/api/tickets/approve`, {
-        empId,
-        ticketId
-      });
-      console.log('response', response);
+  const handleConfirm = async () => {
+    if (!selectedTicketId || !actionType) return;
+    const payload = {
+      empId,
+      ticketId: selectedTicketId,
+      actionType,
+      comment,
+    };
+    console.log("actionType", actionType);
+
+    try {
+      await actionTicket(payload);
+
+      setConfirmOpen(false);
+      setSelectedTicketId(null);
+      setActionType("");
       fetchTickets();
-
-    } catch (error) {
-      console.error('Error fetching tickets', error);
+    } catch (err) {
+      console.error("Action failed", err);
+      alert("Something went wrong!");
     }
   };
 
-  const handleReject = (ticketId) => {
-    console.log(`Reject ticket ID: ${ticketId}`);
-    // Implement API call here
+  const validationSchema = Yup.object().shape({
+    title: Yup.string()
+      .min(10, "Title must be at least 10 characters")
+      .required("Title is required"),
+    description: Yup.string()
+      .min(10, "Description must be at least 10 characters")
+      .required("Description is required"),
+    category: Yup.string().required("Category is required"),
+    priority: Yup.string().required("Priority is required"),
+  });
+
+  const handleActionClick = (item, type) => {
+    setSelectedTicketId(item);
+    setActionType(type);
+    setConfirmOpen(true);
+  };
+
+  const handleTabChange = async (event, newValue) => {
+    setActiveTab(newValue);
+    if (newValue === 1) {
+      console.log("empId", empId);
+      let response = await ticketHistory({ empId });
+      console.log("handleTabChange", response);
+      if (response?.data?.data) {
+        setHistoryTickets(response?.data?.data);
+      }
+    }
   };
 
   return (
     <>
-      <Typography variant="h5" gutterBottom>
-        My Tickets
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table aria-label="tickets table">
-          <TableHead>
-            <TableRow>
-              <TableCell><strong>ID</strong></TableCell>
-              <TableCell><strong>Title</strong></TableCell>
-              <TableCell><strong>Description</strong></TableCell>
-              <TableCell><strong>Category</strong></TableCell>
-              <TableCell><strong>Priority</strong></TableCell>
-              <TableCell><strong>Created At</strong></TableCell>
-              <TableCell><strong>Actions</strong></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tickets.map((ticket) => (
-              <TableRow key={ticket.id}>
-                <TableCell>{ticket.id}</TableCell>
-                <TableCell>{ticket.title}</TableCell>
-                <TableCell>{ticket.description}</TableCell>
-                <TableCell>{ticket.category}</TableCell>
-                <TableCell>{ticket.priority}</TableCell>
-                <TableCell>{new Date(ticket.created_at).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      onClick={() => handleApprove(ticket.id)}
+      <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
+        Create Ticket
+      </Button>
+      <Tabs value={activeTab} onChange={handleTabChange}>
+        <Tab label="Ticket Bucket" />
+        <Tab label="Ticket History" />
+      </Tabs>
+
+      <Paper sx={{ p: 3, mt: 2 }}>
+        {activeTab === 0 && (
+          <>
+            <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
+              My Tickets
+            </Typography>
+
+            {tickets && tickets?.length === 0 ? (
+              <Box textAlign="center" sx={{ mt: 5 }}>
+                <Typography variant="h6" color="text.secondary">
+                  No tickets available in your bucket.
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <strong>Sr No</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Generated By</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Title</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Description</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Category</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Priority</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Created At</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Updated By</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Actions</strong>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tickets && tickets?.map((ticket, index) => (
+                      <TableRow key={ticket.id}>
+                        {/* <TableCell>{ticket.id}</TableCell> */}
+                        <TableCell>{index + 1}</TableCell> {/* Serial Number */}
+                        <TableCell>{ticket.generated_by}</TableCell>
+                        <TableCell>{ticket.title}</TableCell>
+                        <TableCell>{ticket.description}</TableCell>
+                        <TableCell>{ticket.category}</TableCell>
+                        <TableCell>{ticket.priority}</TableCell>
+                        <TableCell>
+                          {new Date(ticket.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell>{ticket.updated_by}</TableCell>
+                        <TableCell>
+                          {console.log(ticket)}
+                          <Box sx={{ mt: 1 }}>
+                            {/* First Row: Approve & Reject */}
+                            <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                              {ticket.priority !== 1 && (
+                                <Button
+                                  variant="contained"
+                                  color="success"
+                                  size="small"
+                                  onClick={() =>
+                                    handleActionClick(ticket.id, "approve")
+                                  }
+                                >
+                                  Approve
+                                </Button>
+                              )}
+                              {ticket.priority !== 4 && (
+                                <Button
+                                  variant="contained"
+                                  color="error"
+                                  size="small"
+                                  onClick={() =>
+                                    handleActionClick(ticket.id, "reject")
+                                  }
+                                >
+                                  Reject
+                                </Button>
+                              )}
+                            </Stack>
+
+                            {/* Second Row: Force Approve & Force Reject */}
+                            <Stack direction="row" spacing={1}>
+                              {[1, 2].includes(ticket.priority) && (
+                                <Button
+                                  variant="outlined"
+                                  color="success"
+                                  size="small"
+                                  onClick={() =>
+                                    handleActionClick(
+                                      ticket.id,
+                                      "force_approve"
+                                    )
+                                  }
+                                >
+                                  Force Approve
+                                </Button>
+                              )}
+                              {[1, 2].includes(ticket.priority) && (
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  onClick={() =>
+                                    handleActionClick(ticket.id, "force_reject")
+                                  }
+                                >
+                                  Force Reject
+                                </Button>
+                              )}
+                            </Stack>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
+        )}
+        {activeTab === 1 && (
+          <>
+            <Typography variant="h5" gutterBottom>
+              Ticket History
+            </Typography>
+
+            {historyTickets && historyTickets?.length === 0 ? (
+              <Box textAlign="center" sx={{ mt: 5 }}>
+                <Typography variant="h6" color="text.secondary">
+                  No approved tickets found.
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} sx={{ mt: 2 }}>
+                <table
+                  border="1"
+                  cellPadding={10}
+                  style={{ borderCollapse: "collapse", width: "100%" }}
+                >
+                  <thead>
+                    <tr>
+                      <th>Ticket ID</th>
+                      <th>Created By</th>
+                      <th>Created At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(historyTickets)?.map(([ticketId, log]) => (
+                      <React.Fragment key={ticketId}>
+                        <tr>
+                          <td>{log.ticket_id}</td>
+                          <td>{log.created_by}</td>
+                          <td>{new Date(log.created_at).toLocaleString()}</td>
+                        </tr>
+
+                        <tr style={{ borderBottom: "none" }}>
+                          <td colSpan={3} style={{ borderBottom: "none" }}>
+                            <strong>Title:</strong> {log.title} <br />
+                            <strong>Description:</strong> {log.description}
+                          </td>
+                        </tr>
+
+                        {/* Third Row: Journey */}
+                        <tr>
+                          <td colSpan={3} style={{ borderTop: "none" }}>
+                            <ol style={{ margin: 0, paddingLeft: "1.2em" }}>
+                              {log?.journey?.map((entry, index) => (
+                                <li key={index}>
+                                  <strong>
+                                    {new Date(
+                                      entry.updated_at
+                                    ).toLocaleString()}
+                                  </strong>{" "}
+                                  &rarr; {entry.updated_by || "System"} &rarr;
+                                  Priority: {entry.priority} &rarr; Status:{" "}
+                                  {entry.status}
+                                </li>
+                              ))}
+                            </ol>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </TableContainer>
+            )}
+          </>
+        )}
+      </Paper>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Create New Ticket</DialogTitle>
+        <Formik
+          initialValues={{
+            title: "",
+            description: "",
+            category: "",
+            priority: "",
+          }}
+          validationSchema={validationSchema}
+          onSubmit={async (values, { resetForm }) => {
+            try {
+              const payload = {
+                ...values,
+                empId: empId,
+              };
+              const res = await createTicket(payload);
+              console.log("Ticket created:", res);
+              fetchTickets(); // Refresh list after creation
+              resetForm();
+              setOpen(false);
+            } catch (error) {
+              console.error("Failed to create ticket", error);
+            }
+          }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            isValid,
+            dirty,
+            setFieldValue, // ✅ Include this for custom input control
+          }) => (
+            <Form>
+              <DialogContent>
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    label="Title"
+                    name="title"
+                    value={values.title}
+                    onChange={(e) => {
+                      const { value } = e.target;
+                      if (value && value?.length <= 20) {
+                        setFieldValue("title", value);
+                      }
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.title && Boolean(errors.title)}
+                    helperText={
+                      touched.title && errors.title
+                        ? errors.title
+                        : `${values?.title?.length}/20 characters`
+                    }
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    name="description"
+                    value={values.description}
+                    onChange={(e) => {
+                      const { value } = e.target;
+                      if (value && value?.length <= 100) {
+                        setFieldValue("description", value);
+                      }
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.description && Boolean(errors.description)}
+                    helperText={
+                      touched.description && errors.description
+                        ? errors.description
+                        : `${values?.description?.length}/100 characters`
+                    }
+                    multiline
+                    rows={3}
+                  />
+
+                  <FormControl
+                    fullWidth
+                    error={touched.category && Boolean(errors.category)}
+                  >
+                    <InputLabel id="category-label">Category</InputLabel>
+                    <Select
+                      labelId="category-label"
+                      name="category"
+                      value={values.category}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      label="Category"
                     >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      onClick={() => handleReject(ticket.id)}
+                      <MenuItem value={1}>1</MenuItem>
+                      <MenuItem value={2}>2</MenuItem>
+                      <MenuItem value={3}>3</MenuItem>
+                      <MenuItem value={4}>4</MenuItem>
+                      <MenuItem value={5}>5</MenuItem>
+                    </Select>
+                    <FormHelperText>
+                      {touched.category && errors.category}
+                    </FormHelperText>
+                  </FormControl>
+
+                  <FormControl
+                    fullWidth
+                    error={touched.priority && Boolean(errors.priority)}
+                  >
+                    <InputLabel id="priority-label">Priority</InputLabel>
+                    <Select
+                      labelId="priority-label"
+                      name="priority"
+                      value={values.priority}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      label="Priority"
                     >
-                      Reject
-                    </Button>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                      <MenuItem value={1}>1 - Admin</MenuItem>
+                      <MenuItem value={2}>2 - Manager</MenuItem>
+                      <MenuItem value={3}>3 - Supervisor</MenuItem>
+                      <MenuItem value={4}>4 - Agent</MenuItem>
+                    </Select>
+                    <FormHelperText>
+                      {touched.priority && errors.priority}
+                    </FormHelperText>
+                  </FormControl>
+                </Stack>
+              </DialogContent>
+
+              <DialogActions>
+                <Button onClick={() => setOpen(false)} color="secondary">
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={!dirty || !isValid}
+                >
+                  Submit
+                </Button>
+              </DialogActions>
+            </Form>
+          )}
+        </Formik>
+      </Dialog>
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>
+          Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Are you sure you want to {actionType} this ticket?
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            label="Reason"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            color={actionType === "approve" ? "success" : "error"}
+          >
+            Yes, {actionType}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

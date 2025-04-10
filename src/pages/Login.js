@@ -11,49 +11,88 @@ import {
   Select,
   InputLabel,
   FormControl,
+  FormHelperText,
 } from "@mui/material";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import axios from "axios";
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0);
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: "",
-  });
-  const [signupData, setSignupData] = useState({
-    name: "",
-    emp_id: "",
-    email: "",
-    mobile: "",
-    password: "",
-    role_id: "",
-  });
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
-  const handleLogin = async () => {
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/users/login",
-        loginData
-      );
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      window.location.href = "/home";
-    } catch (err) {
-      alert(err.response?.data?.error || "Login failed");
-    }
-  };
+  // Yup schemas
+  const loginSchema = Yup.object().shape({
+    email: Yup.string().email("Invalid email").required("Required"),
+    password: Yup.string().required("Required"),
+  });
 
-  const handleSignup = async () => {
-    try {
-      await axios.post("http://localhost:5000/api/users/signup", signupData);
-      alert("Signup successful! You can now log in.");
-      setTab(0);
-    } catch (err) {
-      alert(err.response?.data?.error || "Signup failed");
-    }
-  };
+  const signupSchema = Yup.object({
+    name: Yup.string()
+      .max(30, "Name must be at most 30 characters")
+      .required("Name is required"),
+  
+    emp_id: Yup.string()
+      .matches(/^\d{1,5}$/, "Employee ID must be a number with up to 5 digits")
+      .required("Employee ID is required"),
+  
+    email: Yup.string()
+      .email("Invalid email")
+      .required("Email is required"),
+  
+    mobile: Yup.string()
+      .matches(/^[6-9]\d{9}$/, "Invalid mobile number")
+      .required("Mobile number is required"),
+  
+    password: Yup.string()
+      .min(6, "Password must be at least 6 characters")
+      .max(15, "Password must be at most 15 characters")
+      .required("Password is required"),
+  
+    role_id: Yup.string()
+      .required("Role is required"),
+  });
+  
+
+  const loginFormik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validationSchema: loginSchema,
+    onSubmit: async (values) => {
+      try {
+        const res = await axios.post("http://localhost:5000/api/users/login", values);
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        window.location.href = "/home";
+      } catch (err) {
+        alert(err.response?.data?.error || "Login failed");
+      }
+    },
+  });
+
+  const signupFormik = useFormik({
+    initialValues: {
+      name: "",
+      emp_id: "",
+      role_id: "",
+      email: "",
+      mobile: "",
+      password: "",
+    },
+    validationSchema: signupSchema,
+    onSubmit: async (values) => {
+      try {
+        await axios.post("http://localhost:5000/api/users/signup", values);
+        alert("Signup successful! You can now log in.");
+        setTab(0);
+      } catch (err) {
+        alert(err.response?.data?.error || "Signup failed");
+      }
+    },
+  });
 
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>
@@ -64,8 +103,9 @@ export default function LoginPage() {
         </Tabs>
       </Box>
 
+      {/* Login Form */}
       {tab === 0 && (
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 3 }} component="form" onSubmit={loginFormik.handleSubmit}>
           <Typography variant="h5" gutterBottom>
             Login
           </Typography>
@@ -73,27 +113,31 @@ export default function LoginPage() {
             fullWidth
             margin="normal"
             label="Email"
+            name="email"
             type="email"
-            value={loginData.email}
-            onChange={(e) =>
-              setLoginData({ ...loginData, email: e.target.value })
-            }
+            value={loginFormik.values.email}
+            onChange={loginFormik.handleChange}
+            onBlur={loginFormik.handleBlur}
+            error={loginFormik.touched.email && Boolean(loginFormik.errors.email)}
+            helperText={loginFormik.touched.email && loginFormik.errors.email}
           />
           <TextField
             fullWidth
             margin="normal"
             label="Password"
+            name="password"
             type="password"
-            value={loginData.password}
-            onChange={(e) =>
-              setLoginData({ ...loginData, password: e.target.value })
-            }
+            value={loginFormik.values.password}
+            onChange={loginFormik.handleChange}
+            onBlur={loginFormik.handleBlur}
+            error={loginFormik.touched.password && Boolean(loginFormik.errors.password)}
+            helperText={loginFormik.touched.password && loginFormik.errors.password}
           />
           <Button
             fullWidth
             variant="contained"
             color="primary"
-            onClick={handleLogin}
+            type="submit"
             sx={{ mt: 2 }}
           >
             Login
@@ -101,80 +145,97 @@ export default function LoginPage() {
         </Box>
       )}
 
+      {/* Signup Form */}
       {tab === 1 && (
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 3 }} component="form" onSubmit={signupFormik.handleSubmit}>
           <Typography variant="h5" gutterBottom>
             Signup
           </Typography>
+
           <TextField
             fullWidth
             margin="normal"
             label="Name"
-            value={signupData.name}
-            onChange={(e) =>
-              setSignupData({ ...signupData, name: e.target.value })
-            }
+            name="name"
+            value={signupFormik.values.name}
+            onChange={signupFormik.handleChange}
+            onBlur={signupFormik.handleBlur}
+            error={signupFormik.touched.name && Boolean(signupFormik.errors.name)}
+            helperText={signupFormik.touched.name && signupFormik.errors.name}
           />
           <TextField
             fullWidth
             margin="normal"
             label="Employee ID"
-            value={signupData.emp_id}
-            onChange={(e) =>
-              setSignupData({ ...signupData, emp_id: e.target.value })
-            }
+            name="emp_id"
+            value={signupFormik.values.emp_id}
+            onChange={signupFormik.handleChange}
+            onBlur={signupFormik.handleBlur}
+            error={signupFormik.touched.emp_id && Boolean(signupFormik.errors.emp_id)}
+            helperText={signupFormik.touched.emp_id && signupFormik.errors.emp_id}
           />
 
-          {/* Role Dropdown */}
-          <FormControl fullWidth margin="normal">
+          <FormControl
+            fullWidth
+            margin="normal"
+            error={signupFormik.touched.role_id && Boolean(signupFormik.errors.role_id)}
+          >
             <InputLabel>Role</InputLabel>
             <Select
-              value={signupData.role_id}
+              name="role_id"
               label="Role"
-              onChange={(e) =>
-                setSignupData({ ...signupData, role_id: e.target.value })
-              }
+              value={signupFormik.values.role_id}
+              onChange={signupFormik.handleChange}
+              onBlur={signupFormik.handleBlur}
             >
               <MenuItem value="4">Agent</MenuItem>
               <MenuItem value="3">Supervisor</MenuItem>
               <MenuItem value="2">Manager</MenuItem>
               <MenuItem value="1">Admin</MenuItem>
             </Select>
+            <FormHelperText>{signupFormik.touched.role_id && signupFormik.errors.role_id}</FormHelperText>
           </FormControl>
+
           <TextField
             fullWidth
             margin="normal"
             label="Email"
+            name="email"
             type="email"
-            value={signupData.email}
-            onChange={(e) =>
-              setSignupData({ ...signupData, email: e.target.value })
-            }
+            value={signupFormik.values.email}
+            onChange={signupFormik.handleChange}
+            onBlur={signupFormik.handleBlur}
+            error={signupFormik.touched.email && Boolean(signupFormik.errors.email)}
+            helperText={signupFormik.touched.email && signupFormik.errors.email}
           />
           <TextField
             fullWidth
             margin="normal"
             label="Mobile No"
-            value={signupData.mobile}
-            onChange={(e) =>
-              setSignupData({ ...signupData, mobile: e.target.value })
-            }
+            name="mobile"
+            value={signupFormik.values.mobile}
+            onChange={signupFormik.handleChange}
+            onBlur={signupFormik.handleBlur}
+            error={signupFormik.touched.mobile && Boolean(signupFormik.errors.mobile)}
+            helperText={signupFormik.touched.mobile && signupFormik.errors.mobile}
           />
           <TextField
             fullWidth
             margin="normal"
             label="Password"
+            name="password"
             type="password"
-            value={signupData.password}
-            onChange={(e) =>
-              setSignupData({ ...signupData, password: e.target.value })
-            }
+            value={signupFormik.values.password}
+            onChange={signupFormik.handleChange}
+            onBlur={signupFormik.handleBlur}
+            error={signupFormik.touched.password && Boolean(signupFormik.errors.password)}
+            helperText={signupFormik.touched.password && signupFormik.errors.password}
           />
           <Button
             fullWidth
             variant="contained"
             color="success"
-            onClick={handleSignup}
+            type="submit"
             sx={{ mt: 2 }}
           >
             Signup
