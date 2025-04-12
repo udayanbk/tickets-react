@@ -1,78 +1,251 @@
-// // components/TicketBucket.jsx
-// import React, { useEffect, useState } from "react";
-// import {
-//   Box,
-//   Typography,
-//   Button,
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-// } from "@mui/material";
-// import axios from "axios";
+// components/TicketBucket.jsx
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  DialogContent,
+  DialogTitle,
+  Dialog,
+  TextField,
+  DialogActions,
+  Stack,
+  Pagination,
+} from "@mui/material";
+import { actionTicket, bucketTickets } from "../api/ticket_api";
 
-// export default function TicketBucket({ onCreate }) {
-//   const [tickets, setTickets] = useState([]);
+export default function TicketBucket() {
+  const [tickets, setTickets] = useState([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [actionType, setActionType] = useState("");
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [comment, setComment] = useState("");
+  const [pagination, setPagination] = useState();
+  let user = localStorage.getItem("user");
+  user = JSON.parse(user);
 
-//   const fetchBucketTickets = async () => {
-//     try {
-//       const res = await axios.get("/api/tickets");
-//       setTickets(res.data);
-//     } catch (err) {
-//       console.error("Error fetching tickets:", err);
-//     }
-//   };
+  const fetchTickets = async (pageNo) => {
+    try {
+      console.log('fetchTickets---starts----', pageNo)
+      const res = await bucketTickets({ pageNo });
+      console.log("res", res)
+      if(res?.data?.data){
+        const data = res?.data?.data;
+        setPagination(data.pagination);
+        setTickets(data.tickets)
 
-//   useEffect(() => {
-//     fetchBucketTickets();
-//   }, []);
-  
+      }
+    } catch (error) {
+      console.error("Error fetching tickets", error);
+    }
+  };
 
-//   return (
-//     <>
-//       <Button variant="contained" color="primary" onClick={onCreate}>
-//         Create Ticket
-//       </Button>
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
-//       <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
-//         My Tickets
-//       </Typography>
+  const handleActionClick = (item, type) => {
+    setSelectedTicketId(item);
+    setActionType(type);
+    setConfirmOpen(true);
+  };
 
-//       {tickets.length === 0 ? (
-//         <Box textAlign="center" sx={{ mt: 5 }}>
-//           <Typography variant="h6" color="text.secondary">
-//             No tickets available in your bucket.
-//           </Typography>
-//         </Box>
-//       ) : (
-//         <TableContainer component={Paper} sx={{ mt: 2 }}>
-//           <Table>
-//             <TableHead>
-//               <TableRow>
-//                 <TableCell>Sr. No</TableCell>
-//                 <TableCell>Title</TableCell>
-//                 <TableCell>Description</TableCell>
-//                 <TableCell>Status</TableCell>
-//                 <TableCell>Created At</TableCell>
-//               </TableRow>
-//             </TableHead>
-//             <TableBody>
-//               {tickets.map((ticket, index) => (
-//                 <TableRow key={ticket.id}>
-//                   <TableCell>{index + 1}</TableCell>
-//                   <TableCell>{ticket.title}</TableCell>
-//                   <TableCell>{ticket.description}</TableCell>
-//                   <TableCell>{ticket.status}</TableCell>
-//                   <TableCell>{new Date(ticket.created_at).toLocaleString()}</TableCell>
-//                 </TableRow>
-//               ))}
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//       )}
-//     </>
-//   );
-// }
+  const handleConfirm = async () => {
+    if (!selectedTicketId || !actionType) return;
+    const payload = {
+      // empId,
+      ticketId: selectedTicketId,
+      actionType,
+      comment,
+    };
+    console.log("actionType", actionType);
+
+    try {
+      await actionTicket(payload);
+
+      setConfirmOpen(false);
+      setSelectedTicketId(null);
+      setActionType("");
+      fetchTickets();
+    } catch (err) {
+      console.error("Action failed", err);
+      alert("Something went wrong!");
+    }
+  };
+
+  const paginationHandler = (event, value) => {
+    console.log("value", value)
+    fetchTickets(value, null);
+  };
+
+
+  return (
+    <>
+      <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
+        My Tickets
+      </Typography>
+
+      {tickets && tickets?.length === 0 ? (
+        <Box textAlign="center" sx={{ mt: 5 }}>
+          <Typography variant="h6" color="text.secondary">
+            No tickets available in your bucket.
+          </Typography>
+        </Box>
+      ) : (
+        <TableContainer >
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <strong>Sr No</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Generated By</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Title</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Description</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Category</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Priority</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Created At</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Updated By</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Actions</strong>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tickets &&
+                tickets?.map((ticket, index) => (
+                  <TableRow key={ticket.id}>
+                    {/* <TableCell>{ticket.id}</TableCell> */}
+                    <TableCell>{index + 1}</TableCell> {/* Serial Number */}
+                    <TableCell>{ticket.generated_by}</TableCell>
+                    <TableCell>{ticket.title}</TableCell>
+                    <TableCell>{ticket.description}</TableCell>
+                    <TableCell>{ticket.category}</TableCell>
+                    <TableCell>{ticket.priority}</TableCell>
+                    <TableCell>
+                      {new Date(ticket.created_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell>{ticket.updated_by}</TableCell>
+                    <TableCell>
+                      {console.log(ticket)}
+                      <Box sx={{ mt: 1 }}>
+                        {/* First Row: Approve & Reject */}
+                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              onClick={() =>
+                                handleActionClick(ticket.id, "approve")
+                              }
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              variant="contained"
+                              color="error"
+                              size="small"
+                              onClick={() =>
+                                handleActionClick(ticket.id, "reject")
+                              }
+                            >
+                              Reject
+                            </Button>
+                        </Stack>
+
+                        {/* Second Row: Force Approve & Force Reject */}
+                        <Stack direction="row" spacing={1}>
+                          {[1, 2].includes(user.role_id) && (
+                            <Button
+                              variant="outlined"
+                              color="success"
+                              size="small"
+                              onClick={() =>
+                                handleActionClick(ticket.id, "force_approve")
+                              }
+                            >
+                              Force Approve
+                            </Button>
+                          )}
+                          {[1, 2].includes(user.role_id) && (
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              onClick={() =>
+                                handleActionClick(ticket.id, "force_reject")
+                              }
+                            >
+                              Force Reject
+                            </Button>
+                          )}
+                        </Stack>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+     {pagination?.pageCount &&
+      <Pagination
+        sx={{display: "flex", justifyContent: "center", mt: 2}}
+        count={pagination.pageCount}
+        page={pagination.page}
+        onChange={paginationHandler}
+        color="primary"
+      />
+     }
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>
+          Confirm {actionType === "approve" ? "Approval" : "Rejection"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Are you sure you want to {actionType} this ticket?
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            label="Reason"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            color={actionType === "approve" ? "success" : "error"}
+          >
+            Yes, {actionType}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}

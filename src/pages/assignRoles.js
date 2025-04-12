@@ -144,10 +144,6 @@ const UserTable = () => {
                       <MenuItem value="" disabled>
                         Select
                       </MenuItem>
-                      {/* <MenuItem value="1">Admin</MenuItem>
-                      <MenuItem value="2">Manager</MenuItem>
-                      <MenuItem value="3">Supervisor</MenuItem>
-                      <MenuItem value="4">Agent</MenuItem> */}
                       {
                         roles.map(i=>
                           <MenuItem value={i.id}>{i.role_name}</MenuItem>

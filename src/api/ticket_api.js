@@ -1,22 +1,17 @@
 import axios from "axios";
 import constants from "../config/constants";
-
-const token = localStorage.getItem("token");
-console.log('token', token)
-const headers = {
-  Authorization: `Bearer ${token}`,
-};
+axios.defaults.withCredentials = true;
 
 export const createTicket = (payload) => {
   return axios
-    .post(`${constants.APP_TICKET_API}/new`, payload, {headers})
+    .post(`${constants.APP_TICKET_API}/new`, payload)
     .then((response) => response)
     .catch((error) => error.response);
 };
 
 export const bucketTickets = (payload) => {
   return axios
-    .get(`${constants.APP_TICKET_API}/${payload.empId}`, {headers})
+    .get(`${constants.APP_TICKET_API}/${payload.pageNo}`)
     .then((response) => response)
     .catch((error) => error.response);
 };
@@ -24,21 +19,21 @@ export const bucketTickets = (payload) => {
 
 export const approveTicket = (payload) => {
   return axios
-    .post(`${constants.APP_TICKET_API}/approve`, payload, {headers})
+    .post(`${constants.APP_TICKET_API}/approve`, payload)
     .then((response) => response)
     .catch((error) => error.response);
 };
 
 export const rejectTicket = (payload) => {
   return axios
-    .post(`${constants.APP_TICKET_API}/reject`, payload, {headers})
+    .post(`${constants.APP_TICKET_API}/reject`, payload)
     .then((response) => response)
     .catch((error) => error.response);
 };
 
 export const actionTicket = (payload) => {
   return axios
-    .post(`${constants.APP_TICKET_API}/action`, payload, {headers})
+    .post(`${constants.APP_TICKET_API}/action`, payload)
     .then((response) => response)
     .catch((error) => error.response);
 };
@@ -46,7 +41,14 @@ export const actionTicket = (payload) => {
 export const ticketHistory = (payload) => {
   console.log('-----call', payload)
   return axios
-    .post(`${constants.APP_TICKET_API}/history`, payload, {headers})
+    .get(`${constants.APP_TICKET_API}/history/${payload.pageNo}`)
+    .then((response) => response)
+    .catch((error) => error.response);
+};
+
+export const getAllTickets = (payload) => {
+  return axios
+    .get(`${constants.APP_TICKET_API}/admin/getAllTickets`)
     .then((response) => response)
     .catch((error) => error.response);
 };
