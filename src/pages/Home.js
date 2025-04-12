@@ -10,12 +10,11 @@ const Home = () => {
   user = JSON.parse(user)
   console.log('user', user)
 
-
   return (
     <>
     <Navbar />
     <Box p={4}>
-        <TicketsList empId={user.emp_id} />
+        <TicketsList empId={user?.emp_id} />
     </Box>
     </>
   );

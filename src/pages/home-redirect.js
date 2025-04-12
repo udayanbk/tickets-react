@@ -1,20 +1,28 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { checkLoginExists } from "../api/user_api";
+// import LoginPage from "./Login";
 
-const HomeRedirect = () => {
-  const navigate = useNavigate();
+// const HomeRedirect = () => {
+//   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      navigate("/home");
-    }
-    else{
-      navigate("/login");
-    }
-  }, [navigate]);
+//   useEffect(() => {
+//     checkValidLogin()
+//   }, []);
 
-  return null;
-};
+//   const checkValidLogin = async ()=>{
+//     const resp = await checkLoginExists()
+//     console.log("resp", resp);
+//     if(resp?.data?.status === true){
+//       navigate("/home");
+//     }
+//     else{
+//       navigate("/login");
+//     }
+//   };
 
-export default HomeRedirect;
+
+//   return null;
+// };
+
+// export default HomeRedirect;

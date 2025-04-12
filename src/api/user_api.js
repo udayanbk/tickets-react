@@ -1,6 +1,5 @@
 import axios from "axios";
 import constants from "../config/constants";
-
 axios.defaults.withCredentials = true;
 
 export const login = (payload) => {
@@ -9,6 +8,20 @@ export const login = (payload) => {
     .then((response) => response)
     .catch((error) => error.response);
 };
+
+export const logout = () => {
+  return axios
+    .get(`${constants.APP_USER_API}/logout`)
+    .then((response) => response)
+    .catch((error) => error.response);
+};
+
+// export const checkLoginExists = (payload) => {
+//   return axios
+//     .get(`${constants.APP_USER_API}/isLogIn`, payload)
+//     .then((response) => response)
+//     .catch((error) => error.response);
+// };
 
 export const usersData = (payload) => {
   return axios

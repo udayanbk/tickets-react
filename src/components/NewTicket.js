@@ -16,9 +16,11 @@ import { Form, Formik } from "formik";
 import React, { useState } from "react";
 import * as Yup from "yup";
 import { createTicket } from "../api/ticket_api";
+import { useSnackbar } from 'notistack';
 
 const NewTicket = ({ empId }) => {
   const [open, setOpen] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
   const validationSchema = Yup.object().shape({
     title: Yup.string()
@@ -39,7 +41,7 @@ const NewTicket = ({ empId }) => {
       };
       const res = await createTicket(payload);
       console.log("Ticket created:", res);
-      // fetchTickets(); // Refresh list after creation
+      enqueueSnackbar('Ticket Created!', { variant: 'success' });
       resetForm();
       setOpen(false);
     } catch (error) {

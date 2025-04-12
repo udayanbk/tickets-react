@@ -9,26 +9,28 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
   Alert,
   Menu,
   MenuItem,
   ClickAwayListener,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
+import { logout } from '../api/user_api';
 
 const Navbar = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const [anchorEl, setAnchorEl] = useState(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const handleLogoutConfirm = () => {
-    localStorage.removeItem('token');
+  const handleLogoutConfirm = async () => {
+    const resp = await logout();
+    console.log("resp-----out--", resp)
     localStorage.removeItem('user');
     setLogoutDialogOpen(false);
-    setSnackbarOpen(true);
+    enqueueSnackbar('Logout Successfully!', { variant: 'success' });
     setTimeout(() => {
       navigate('/');
     }, 1000);
@@ -107,7 +109,7 @@ const Navbar = () => {
       </Dialog>
 
       {/* Logout Snackbar */}
-      <Snackbar
+      {/* <Snackbar
         open={snackbarOpen}
         autoHideDuration={1500}
         onClose={() => setSnackbarOpen(false)}
@@ -116,7 +118,7 @@ const Navbar = () => {
         <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
           Logged out successfully!
         </Alert>
-      </Snackbar>
+      </Snackbar> */}
     </>
   );
 };

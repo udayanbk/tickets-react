@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   TextField,
@@ -18,10 +18,12 @@ import * as Yup from "yup";
 import axios from "axios";
 import { login } from "../api/user_api";
 // import { useNotification } from "../services/NotificationProvider";
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   // const {notify} = useNotification();
   const [tab, setTab] = useState(0);
+  const navigate = useNavigate();
 
   const handleTabChange = (e, newValue) => setTab(newValue);
 
@@ -66,15 +68,13 @@ export default function LoginPage() {
     validationSchema: loginSchema,
     onSubmit: async (values) => {
       try {
-        // const res = await axios.post("http://localhost:5000/api/users/login", values);
-        // localStorage.setItem("token", res.data.token);
-        // localStorage.setItem("user", JSON.stringify(res.data.user));
         const res = await login(values);
         console.log("res-----------------------------", res)
         if (res?.data?.user) {
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
-        window.location.href = "/home";
+        navigate('/home')
+        // window.location.href = "/home";
       } catch (err) {
         alert(err.response?.data?.error || "Login failed");
       }
